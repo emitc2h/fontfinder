@@ -1,0 +1,9 @@
+*.pyc
+sktfnn/
+*.png
+flask_dev_setup.ipynb
+*.key
+dafont_fonts/
+tests.ipynb
+flaskexample/
+.ipynb_checkpoints/
