@@ -7,3 +7,11 @@ dafont_fonts/
 tests.ipynb
 flaskexample/
 .ipynb_checkpoints/
+*.png
+*.PNG
+*.jpg
+*.JPG
+*.gif
+*.GIF
+*.jpeg
+*.JPEG

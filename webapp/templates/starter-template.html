@@ -9,7 +9,7 @@
     <meta name="author" content="">
     <link rel="icon" href="../../favicon.ico">
 
-    <title>Starter Template for Bootstrap</title>
+    <title>FontFinder Search Page</title>
 
     <!-- Bootstrap core CSS -->
     <link href="../static/css/bootstrap.min.css" rel="stylesheet">
@@ -18,7 +18,7 @@
     <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="starter-template.css" rel="stylesheet">
+    <link href="../static/css/starter-template.css" rel="stylesheet">
 
     <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
     <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
@@ -42,11 +42,11 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">Project name</a>
+          <a class="navbar-brand" href="#">FontFinder</a>
         </div>
         <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
-            <li class="active"><a href="#">Home</a></li>
+            <li class="active"><a href="#">Find Fonts</a></li>
             <li><a href="#about">About</a></li>
             <li><a href="#contact">Contact</a></li>
           </ul>
@@ -54,41 +54,58 @@
       </div>
     </nav>
 
-    <br><br>
-
-
     <div class="container">
-    
+
       <div class="starter-template">
-        <h2>Input Page</h2>
-        <p>Enter some user input</p>
+
+        <h1>FontFinder</h1>
+
+        <div>
+        <p class="lead">Seen a font that you like that you would like to use? Can't find it? You've come to the right place!<br><br> First, upload an image of a single character in the font you are looking for.</p>
       </div>
-    
-      <div class = "container">
-    
-        <form  action="/output" method="GET">
-          <div class="form-group">
-            <label for="birth_month">Birth Month:</label>
-            <input type="text" id="birth_month" name='birth_month' placeholder="e.g. ">
-          </div>
 
-          <div>
-            <button type="submit" class="btn btn-default btn-lg">Find these Cesareans!</button>
-          </div>
+      <div>
+        <img src={{ char_upload }} class="img-thumbnail">
+        <p>{{ char_upload }}</p>
+      </div>
 
+      <div>
+        <form action="" method=post enctype=multipart/form-data>
+          <p>
+            <input type=file name=file>
+            <input type=submit value=upload>
+          </p>
         </form>
       </div>
 
-      <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
-      <script src="static/js/bootstrap.min.js"></script>
+      <p class="lead">What character is it?</p>
 
-    </div> <!-- /.container-->
+      <form  action="/output" method="GET">
+        <div class="form-group">
+          <label for="birth_month">Character:</label>
+          <input type="text" id="character" name='character' placeholder="e.g. M">
+        </div>
+
+        <div>
+          <button type="submit" class="btn btn-default btn">find my font!</button>
+        </div>
+      </form>
+
+      <div class="page-header">
+        <h1>Results</h1>
+      </div>
+
+
+    </div><!-- /.container -->
 
 
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-    <script src="../static/js/bootstrap.min.js"></script>
+    <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+    <script src="../../dist/js/bootstrap.min.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
   </body>
 </html>

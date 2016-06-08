@@ -1,3 +1,3 @@
-#! /usr/bin/env python
-from flaskapp import app
-app.run(debug=True)
+#!/usr/bin/env python
+from webapp import app
+app.run(debug = True)
