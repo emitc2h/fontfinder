@@ -66,7 +66,6 @@
 
       <div>
         <img src={{ char_upload }} class="img-thumbnail">
-        <p>{{ char_upload }}</p>
       </div>
 
       <div>
@@ -80,10 +79,10 @@
 
       <p class="lead">What character is it?</p>
 
-      <form  action="/output" method="GET">
+      <form  action="/index" method="GET">
         <div class="form-group">
           <label for="birth_month">Character:</label>
-          <input type="text" id="character" name='character' placeholder="e.g. M">
+          <input type="text" id="character" name='character' placeholder={{ char_placeholder }}>
         </div>
 
         <div>
@@ -93,6 +92,22 @@
 
       <div class="page-header">
         <h1>Results</h1>
+      </div>
+      <div class="col-sm-6">
+        {% for result in results %}
+        <a href={{ result['url'] }} class="list-group-item">
+          <div class="row">
+            <div class="col-lg-8">
+              <img src={{ url_for('static', filename=result['img_path'] ) }} class="img-thumbnail">
+            </div>
+            <div class="col-lg-8">
+              <h4 class="list-group-item-heading"> {{ result['name'] }} </h4>
+              <p class='list-group-item-text'> {{ result['licensing'] }} </p>
+              <p class='list-group-item-text'> {{ result['origin'] }}</p>
+            </div>
+          </div>
+        </a>
+          {% endfor %}
       </div>
 
 

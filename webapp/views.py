@@ -1,5 +1,7 @@
-from flask import render_template, request, flash, redirect, url_for
+from flask import render_template, request, flash, redirect, url_for, send_from_directory
 from webapp import app
+
+from core import utils, engine
 
 import os
 
@@ -12,7 +14,7 @@ def allowed_file(filename):
     """
     Checks if the file extension is allowed
     """
-    return ('.' in filename) and (filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS)
+    return ('.' in filename) and (filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -23,6 +25,9 @@ def index():
     Index page
     """
 
+    char_placeholder='M'
+
+    ## - - - - - - - - - - - - - - - - - - - - - - - - 
     if request.method == 'POST':
 
         ## Check if the post request has the file part
@@ -38,50 +43,85 @@ def index():
             flash('No selected file')
             return redirect(request.url)
 
+        ## If the right kind of file is uploaded
         if f and allowed_file(f.filename):
-            filename = secure_filename(f.filename)
-            f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-            return render_template("starter-template.html", char_upload=url_for('static', filename=os.path.join('img', filename)))
+            ## Get uploaded file extension
+            ext = f.filename.rsplit('.', 1)[1]
 
-    return render_template("starter-template.html", char_upload=url_for('static', filename='img/Mtest.png'))
+            ## Rename file to usr_upload.<ext>
+            filename = secure_filename('usr_upload.{0}'.format(ext))
+
+            ## save to the upload folder (static/img)
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            f.save(save_path)
+
+            ## preprocess the image and save again
+            img = utils.preprocess(save_path, imgsize=48)
+            new_save_path = os.path.join(app.config['UPLOAD_FOLDER'], 'usr_upload.jpg')
+            utils.save(img, new_save_path)
+
+            return render_template(
+                "starter-template.html",
+                char_upload=url_for('static', filename=os.path.join('img/usr_upload.jpg')),
+                char_placeholder=char_placeholder,
+                results=[]
+                )
 
 
-@app.route('/upload', methods=['GET', 'POST'])
-## ==============================================
-def upload_file():
-    """
-    A page that uploads a file
-    """
-    if request.method == 'POST':
+    ## - - - - - - - - - - - - - - - - - - - - - - - - 
+    if request.method == 'GET':
 
-        ## Check if the post request has the file part
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
+        character = request.args.get('character')
+        if character and len(character) == 1 and character.isalnum():
 
-        f = request.files['file']
+            char_placeholder = character
 
-        ## if user does not select file, browser also
-        ## submit an empty part without filename
-        if f.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
+            results = engine.evaluate(
+                character,
+                os.path.join(app.config['UPLOAD_FOLDER'], 'usr_upload.jpg'),
+                app.config['UPLOAD_FOLDER'],
+                n_random=100
+                )
 
-        if f and allowed_file(f.filename):
-            filename = secure_filename(f.filename)
-            f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            print results
 
-            return redirect(url_for('upload_file', filename=filename))
+            return render_template(
+                "starter-template.html",
+                char_upload=url_for('static', filename=os.path.join('img/usr_upload.jpg')),
+                char_placeholder=char_placeholder,
+                results=results
+                )
 
-    return '''
-            <!doctype html>
-            <title>Upload new File</title>
-            <h1>Upload new File</h1>
-            <form action="" method=post enctype=multipart/form-data>
-              <p><input type=file name=file>
-                <input type=submit value=Upload>
-            </form>
-           '''
+        else:
+
+            return render_template(
+                "starter-template.html",
+                char_upload=url_for('static', filename='img/M.png'),
+                char_placeholder=char_placeholder,
+                results=[]
+                )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
