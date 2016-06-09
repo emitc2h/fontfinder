@@ -97,10 +97,10 @@
         {% for result in results %}
         <a href={{ result['url'] }} class="list-group-item">
           <div class="row">
-            <div class="col-lg-8">
+            <div class="col-xs-6">
               <img src={{ url_for('static', filename=result['img_path'] ) }} class="img-thumbnail">
             </div>
-            <div class="col-lg-8">
+            <div class="col-md-8">
               <h4 class="list-group-item-heading"> {{ result['name'] }} </h4>
               <p class='list-group-item-text'> {{ result['licensing'] }} </p>
               <p class='list-group-item-text'> {{ result['origin'] }}</p>

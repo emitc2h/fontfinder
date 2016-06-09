@@ -60,18 +60,20 @@ def train_net(char, img, n_random=10):
     ## Generate the training dataset
     X_train, y_train = utils.generate_training_sample(char, img, flist, n_random)
 
+    p1=2
+
     ## Specify the neural network configuration
     nn = NeuralNetwork(
         hidden_layers = [
             ConvLayer(
                 img_size=(d,d),
-                patch_size=(6,6),
+                patch_size=(5,5),
                 n_features=32,
                 pooling='max',
-                pooling_size=(3,3),
+                pooling_size=(p1,p1),
             ),
             ConvLayer(
-                img_size=(16,16),
+                img_size=(d/p1,d/p1),
                 n_features=64,
                 pooling='max',
             ),
@@ -80,12 +82,12 @@ def train_net(char, img, n_random=10):
                 activation='relu'
             )
         ],
-        learning_algorithm='GradientDescent',
+        learning_algorithm='Adam',
         cost_function='log-likelihood',
         learning_rate=5e-3,
         early_stopping=False,
         stagnation=10,
-        n_epochs=1,
+        n_epochs=50,
         mini_batch_size=y_train.shape[0]
         )
 
@@ -154,7 +156,6 @@ def evaluate(char, img_path, upload_path, n_random=100):
     results = []
 
     top20 = df.head(20)
-    print top20
 
     i = 0
 
