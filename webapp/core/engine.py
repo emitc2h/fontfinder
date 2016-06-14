@@ -8,7 +8,7 @@ from sqlalchemy_utils import database_exists, create_database
 import psycopg2
 import pandas as pd
 import numpy as np
-import cv2, os, random, string
+import cv2, os, random, string, math
 
 ## Interacting with AWS S3 bucket
 import boto
@@ -150,15 +150,15 @@ def evaluate(char, img_path, upload_path, n_random=10):
     for font in df['aws_bucket_key']:
 
         ## Generate proper key string
-        buckey_key = '{0}/{1}.jpg'.format(font.split('.')[0], char)
+        bucket_key = '{0}/{1}.jpg'.format(font.split('.')[0], char)
 
         if progress%100 == 0:
             print 'progress {0}/{1}'.format(progress, complete)
 
         try:
             image = utils.read_img_from_s3(bucket_key)
-        except:
-            image = np.ones((d,d), dtype='uint8')
+        except AssertionError:
+            image = np.zeros((d,d), dtype='uint8')
 
         norm_image = np.multiply(image, 1.0/255.0)
         norm_image.shape = (1,d*d)
@@ -206,13 +206,14 @@ def evaluate(char, img_path, upload_path, n_random=10):
 
     ## Dump a grid image of the 10000 first results
     sorted_img_idx = df['img_idx'].values
+    n_fonts = min(10000, len(sorted_img_idx))
 
     font_index = 0
     y_fonts = []
 
-    for i in range(10):
+    for i in range(int(math.sqrt(n_fonts))):
         x_fonts = []
-        for j in range(10):
+        for j in range(int(math.sqrt(n_fonts))):
             img = images[sorted_img_idx[font_index]]
             x_fonts.append(img)
             font_index += 1
