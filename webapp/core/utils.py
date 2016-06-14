@@ -532,8 +532,10 @@ def generate_training_sample(char, img, font_list, n_random=10):
     while len(random) < n_random:
 
         random_font = np.random.choice(font_list, 1)[0]
+        random_font_key = '{0}/{1}.jpg'.format(random_font.split('.')[0], char)
+
         try:
-            rdn_img = generate_letter_image(char, random_font, imgsize=w)
+            rdn_img = utils.read_img_from_s3(random_font_key)
         except:
             continue
 

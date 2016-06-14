@@ -113,7 +113,7 @@ def index():
                 character,
                 os.path.join(app.config['UPLOAD_FOLDER'], usr_upload_fnames[-1]),
                 app.config['UPLOAD_FOLDER'],
-                n_random=100
+                n_random=0
                 )
 
             r = make_response(

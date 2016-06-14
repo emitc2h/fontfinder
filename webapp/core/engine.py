@@ -25,18 +25,22 @@ def connect_to_db():
     host   = 'fontdbinstance.c9mwqfkzqqmh.us-west-2.rds.amazonaws.com:5432'
     dbname = 'fontdb'
 
-    username = ''
+    user = ''
     pswd = ''
 
     with open('db_credentials', 'r') as f:
         credentials = f.readlines()
         f.close()
     
-        username = credentials[0].rstrip()
-        pswd     = credentials[1].rstrip()
+        user = credentials[0].rstrip()
+        pswd = credentials[1].rstrip()
 
-    engine     = create_engine('postgresql://{0}:{1}@{2}/{3}'%(user,pswd,host,dbname))
-    connection = psycopg2.connect(database = dbname, user = user)
+    connection = psycopg2.connect(
+        database=dbname,
+        user=user,
+        password=pswd,
+        host=host.split(':')[0],
+        port=5432)
 
     return connection
 
@@ -50,12 +54,12 @@ def get_fontpath_list(connection):
     """
 
     query = '''
-        SELECT DISTINCT local_path1 FROM font_metadata;
+        SELECT DISTINCT aws_bucket_key FROM font_metadata;
     '''
 
     query_results = pd.read_sql_query(query,connection)
 
-    return list(query_results['local_path1'].values)
+    return list(query_results['aws_bucket_key'].values)
 
 
 
@@ -115,7 +119,7 @@ def train_net(char, img, n_random=10):
     return nn
 
 ## ----------------------------------------
-def evaluate(char, img_path, upload_path, n_random=100):
+def evaluate(char, img_path, upload_path, n_random=10):
     """
     train and evaluate the model
     """
@@ -130,7 +134,7 @@ def evaluate(char, img_path, upload_path, n_random=100):
     nn = train_net(char, img, n_random)
 
     ## Retrieve full database
-    df = pd.read_sql_query('SELECT DISTINCT name, url, licensing, local_path1 FROM font_metadata;', connect_to_db())
+    df = pd.read_sql_query('SELECT DISTINCT name, url, licensing, aws_bucket_key FROM font_metadata;', connect_to_db())
 
     scores = []
     images = []
@@ -143,17 +147,20 @@ def evaluate(char, img_path, upload_path, n_random=100):
     print '- '*25
 
 
-    for font in df['local_path1']:
+    for font in df['aws_bucket_key']:
+
+        ## Generate proper key string
+        buckey_key = '{0}/{1}.jpg'.format(font.split('.')[0], char)
 
         if progress%100 == 0:
             print 'progress {0}/{1}'.format(progress, complete)
 
         try:
-            image = utils.generate_letter_image(char, font, imgsize=d)
+            image = utils.read_img_from_s3(bucket_key)
         except:
             image = np.ones((d,d), dtype='uint8')
 
-        norm_image = np.multiply(image, 1.0/256)
+        norm_image = np.multiply(image, 1.0/255.0)
         norm_image.shape = (1,d*d)
 
         images.append(image)
@@ -203,9 +210,9 @@ def evaluate(char, img_path, upload_path, n_random=100):
     font_index = 0
     y_fonts = []
 
-    for i in range(100):
+    for i in range(10):
         x_fonts = []
-        for j in range(100):
+        for j in range(10):
             img = images[sorted_img_idx[font_index]]
             x_fonts.append(img)
             font_index += 1
