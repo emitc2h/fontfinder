@@ -137,7 +137,7 @@ def evaluate(char, img_path, upload_path, n_random=10):
     df = pd.read_sql_query('SELECT DISTINCT name, url, licensing, aws_bucket_key FROM font_metadata;', connect_to_db())
 
     scores = []
-    images = []
+    #images = []
 
     progress = 0
     complete = len(df)
@@ -163,7 +163,7 @@ def evaluate(char, img_path, upload_path, n_random=10):
         norm_image = np.multiply(image, 1.0/255.0)
         norm_image.shape = (1,d*d)
 
-        images.append(image)
+        #images.append(image)
 
         score = nn.predict_proba(norm_image)[0][0]
         scores.append(score)
@@ -205,24 +205,24 @@ def evaluate(char, img_path, upload_path, n_random=10):
         i += 1
 
     ## Dump a grid image of the 10000 first results
-    sorted_img_idx = df['img_idx'].values
-    n_fonts = min(10000, len(sorted_img_idx))
+    # sorted_img_idx = df['img_idx'].values
+    # n_fonts = min(10000, len(sorted_img_idx))
 
-    font_index = 0
-    y_fonts = []
+    # font_index = 0
+    # y_fonts = []
 
-    for i in range(int(math.sqrt(n_fonts))):
-        x_fonts = []
-        for j in range(int(math.sqrt(n_fonts))):
-            img = images[sorted_img_idx[font_index]]
-            x_fonts.append(img)
-            font_index += 1
+    # for i in range(int(math.sqrt(n_fonts))):
+    #     x_fonts = []
+    #     for j in range(int(math.sqrt(n_fonts))):
+    #         img = images[sorted_img_idx[font_index]]
+    #         x_fonts.append(img)
+    #         font_index += 1
 
-        y_fonts.append(np.hstack(x_fonts))
+    #     y_fonts.append(np.hstack(x_fonts))
         
-    all_fonts = np.vstack(y_fonts)
+    # all_fonts = np.vstack(y_fonts)
 
-    cv2.imwrite(os.path.join(upload_path, 'out.png'), all_fonts)
+    # cv2.imwrite(os.path.join(upload_path, 'out.png'), all_fonts)
 
     return results
 

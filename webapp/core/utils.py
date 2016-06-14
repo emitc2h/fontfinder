@@ -1,7 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from scipy import signal
-from skimage import transform
 import cv2
 
 import os, math
