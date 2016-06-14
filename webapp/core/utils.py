@@ -4,7 +4,7 @@ from scipy import signal
 from skimage import transform
 import cv2
 
-import os
+import os, math
 
 ## -------------------------------------
 def read_img(path):
@@ -144,7 +144,7 @@ def edge_and_crop(img, imgsize=100):
     scaling_factor = 0.9*imgsize/max(img_crop.shape)
     new_h = int(img_crop.shape[0]*scaling_factor)
     new_w = int(img_crop.shape[1]*scaling_factor)
-    
+
     img_crop  = cv2.resize(img_crop, (new_w, new_h), interpolation=cv2.INTER_AREA)
     
     ## Pad the image such that it fits, centered in a 100x100 px image
@@ -209,16 +209,22 @@ def generate_letter_image(letter, font_path, imgsize=100):
     ## Make sure the entire character is contained in the raw image
     delta_x      = 0
     delta_y      = 0
-    font_size    = imgsize*5
+    font_size    = imgsize*4
     
     left_check   = True
     right_check  = True
     top_check    = True
     bottom_check = True
     
-    raw_w = raw_h = imgsize*5
+    raw_w = raw_h = imgsize*10
+
+    counter = 0
 
     while True:
+
+        if counter > 10: break
+
+        counter += 1
         
         ## Generate the image using PIL
         image_raw = Image.new(
@@ -307,10 +313,14 @@ def generate_letter_image(letter, font_path, imgsize=100):
     y0, y1 = y_values[0][0], y_values[0][-1]
     
     array_crop = array_raw[max(0, x0-3):x1, max(0, y0-3):y1]
+
+    array_crop = array_crop.astype(float)
     
     scaling_factor = 0.9*imgsize/max(array_crop.shape)
+    new_h = int(array_crop.shape[0]*scaling_factor)
+    new_w = int(array_crop.shape[1]*scaling_factor)
     
-    array_crop = transform.rescale(array_crop, scale=scaling_factor, preserve_range=True)
+    array_crop = cv2.resize(array_crop, (new_w, new_h), interpolation=cv2.INTER_AREA)
     
     ## Pad the image such that it fits, centered in a 100x100 px image
     array = np.zeros((imgsize,imgsize), dtype='uint8')
@@ -327,6 +337,141 @@ def generate_letter_image(letter, font_path, imgsize=100):
     array[y0:y1, x0:x1] = array_crop
     
     return array
+
+
+## ----------------------------------------
+def margins(img):
+    """
+    Make sure the margins are the same
+    """
+
+    imgsize = max(img.shape)
+
+    ## Detect letter edges and crop
+    x_projection = img.sum(axis=1)
+    x_values = np.nonzero(x_projection)
+    x0, x1 = x_values[0][0], x_values[0][-1]
+    
+    y_projection = img.sum(axis=0)
+    y_values = np.nonzero(y_projection)
+    y0, y1 = y_values[0][0], y_values[0][-1]
+    
+    img_crop = img[max(0, x0-3):x1, max(0, y0-3):y1]
+
+    img_crop = img_crop.astype(float)
+    
+    scaling_factor = 0.9*imgsize/max(img_crop.shape)
+    new_h = int(img_crop.shape[0]*scaling_factor)
+    new_w = int(img_crop.shape[1]*scaling_factor)
+    
+    img_crop = cv2.resize(img_crop, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    
+    ## Pad the image such that it fits, centered in a 100x100 px image
+    array = np.zeros(img.shape)
+    
+    x_margin = imgsize - img_crop.shape[1]
+    y_margin = imgsize - img_crop.shape[0]
+    
+    x0 = (x_margin//2 + x_margin%2) - 1
+    x1 = (imgsize-1) - x_margin//2
+    
+    y0 = (y_margin//2 + y_margin%2) - 1
+    y1 = (imgsize-1) - y_margin//2
+    
+    array[y0:y1, x0:x1] = img_crop
+
+    return array
+
+
+
+
+## ----------------------------------------
+def scale_variations(img, scale_factors=[0.9, 0.8, 0.7, 0.6]):
+    """
+    Produce scaling variations on input image
+    """
+    
+    output_images = []
+    
+    for sf in scale_factors:
+        
+        canvas = np.zeros(img.shape, dtype=img.dtype)
+        
+        new_shape = (int(img.shape[0]*sf), int(img.shape[1]*sf))
+        
+        img_crop  = cv2.resize(img, new_shape, interpolation=cv2.INTER_AREA)
+        
+        x_margin = img.shape[1] - new_shape[1]
+        y_margin = img.shape[0] - new_shape[0]
+    
+        x0 = (x_margin//2 + x_margin%2) - 1
+        x1 = (img.shape[1]-1) - x_margin//2
+    
+        y0 = (y_margin//2 + y_margin%2) - 1
+        y1 = (img.shape[1]-1) - y_margin//2
+    
+        canvas[y0:y1, x0:x1] = img_crop
+        
+        output_images.append(canvas)
+        
+    return output_images
+
+
+
+## ----------------------------------------
+def skew_variations(img, vertical_shear=[0], horizontal_shear=[0]):
+    """
+    Produces skewing variations on input image
+    """
+    
+    output_images = []
+    
+    for vs in vertical_shear:
+        for hs in horizontal_shear:
+            
+            origin = np.float32([[0,0],[1,0],[0,1]])
+            shear  = np.float32([[hs,vs],[hs,-vs],[-hs,vs]])
+            
+            x = img.shape[1]//2
+            y = img.shape[0]//2
+            
+            absolufy = np.float32([[x,y],[x,y],[x,y]])
+            
+            transformed = origin + shear + absolufy
+
+            M = cv2.getAffineTransform(origin+absolufy, transformed)
+            output_images.append(margins(cv2.warpAffine(img,M,img.shape)))
+    
+    return output_images
+
+
+
+## ----------------------------------------
+def rotate_variations(img, angles=[]):
+    """
+    Produces rotation variations on input image
+    """
+    
+    output_images = []
+    
+    for a in angles:
+        
+        M = cv2.getRotationMatrix2D((img.shape[0]//2,img.shape[1]//2),a,1)
+        output_images.append(margins(cv2.warpAffine(img,M,img.shape)))
+        
+    return output_images
+
+
+
+## ----------------------------------------
+def pixbypix_similarity(img1, img2):
+    """
+    Determines the pixel by pixel similarity of two images
+    """
+    
+    assert img1.shape == img2.shape, 'Images should be of the same size'
+    
+    return 1.0 - np.sum(np.absolute(np.subtract(img1, img2)))/(img1.shape[0]*img1.shape[1]*img1.ptp())
 
 
 
@@ -353,18 +498,21 @@ def generate_training_sample(char, img, font_list, n_random=10):
     assert w == h, 'Char image should be square'
     
     ## Obtain random fonts
-    random_fonts = np.random.choice(font_list, n_random)
     random = []
 
-    for font in random_fonts:
+    while len(random) < n_random:
+
+        random_font = np.random.choice(font_list, 1)[0]
         try:
-            rdn_img      = generate_letter_image(char, font, imgsize=w)
-            rdn_norm_img = np.multiply(rdn_img, 1.0/255)
-            
-            random.append(np.ravel(rdn_norm_img))
+            rdn_img = generate_letter_image(char, random_font, imgsize=w)
         except:
-            random.append(np.ones(w*w))
-            
+            continue
+
+        rdn_norm_img = np.multiply(rdn_img, 1.0/255)
+        pbp          = pixbypix_similarity(rdn_norm_img, norm_img)
+        if (pbp < 0.75) or (pbp > 0.99): continue
+        random.append(np.ravel(rdn_norm_img))
+
     ## Put together the different types of training samples
     n_noise = 10
     noise   = [np.ravel(generate_noise(imgsize=w)) for i in range(n_noise)]
@@ -373,12 +521,19 @@ def generate_training_sample(char, img, font_list, n_random=10):
     zeros   = [np.zeros(w*w)]*n_zeros
     
     n_signal = n_random + n_noise + n_zeros
-    signal   = [np.ravel(norm_img)]*n_signal
-    
-    n_total = 2*n_signal
-    
+
+    n_variations = n_signal//4
+
+    variations = []
+    variations += scale_variations(norm_img, scale_factors=np.linspace(0.7, 0.95, n_variations))
+    variations += skew_variations(norm_img, vertical_shear=np.linspace(-0.1, 0.1, math.ceil(math.sqrt(n_variations))), horizontal_shear=np.linspace(-0.1, 0.1, math.ceil(math.sqrt(n_variations))))
+    variations += rotate_variations(norm_img, angles=np.linspace(-30,30, n_variations))
+    variations += [norm_img]*n_variations
+
+    signal = [np.ravel(var) for var in variations]
+
     X = np.stack(signal + noise + zeros + random, axis=0)
-    y = np.array([0]*n_signal + [1]*n_noise + [2]*n_zeros + range(3, n_random+3))
+    y = np.array([0]*len(signal) + [1]*n_noise + [2]*n_zeros + range(3, n_random+3))
     
     return X,y
 

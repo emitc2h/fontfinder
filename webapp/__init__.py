@@ -8,7 +8,7 @@ app = Flask(__name__)
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 ## Specify the upload directory target
-app.config['UPLOAD_FOLDER'] = os.path.join(APP_ROOT, 'static/img')
+app.config['UPLOAD_FOLDER'] = os.path.join(APP_ROOT, 'dynamic')
 
 ## Get the views
 from webapp import views

@@ -5,11 +5,13 @@ from webapp import app
 
 from core import utils, engine
 
-import os
+import os, datetime, random, string
 
 from werkzeug.utils import secure_filename
 
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+
+usr_upload_fnames = []
 
 ## ----------------------------------------------
 def allowed_file(filename):
@@ -20,22 +22,24 @@ def allowed_file(filename):
 
 
 ## ----------------------------------------------
-def nocache(view):
-    @wraps(view)
-    def no_cache(*args, **kwargs):
-        response = make_response(view(*args, **kwargs))
-        response.headers['Last-Modified'] = datetime.now()
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '-1'
-        return response
-        
-    return update_wrapper(no_cache, view)
+def add_headers(response):
+    """
+    Makes sure there's no image caching
+    """
+
+    response.headers.add('Last-Modified', datetime.datetime.now())
+    response.headers.add('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0')
+    response.headers.add('Pragma', 'no-cache')
+
+    return response
+
+@app.route('/dynamic/<filename>')
+def send_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/index', methods=['GET', 'POST'])
-@nocache
 ## ==============================================
 def index():
     """
@@ -74,48 +78,66 @@ def index():
             f.save(save_path)
 
             ## preprocess the image and save again
+            random_fname = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5)) + '.jpg'
+            usr_upload_fnames.append(random_fname)
+
             img = utils.preprocess(save_path, imgsize=48)
-            new_save_path = os.path.join(app.config['UPLOAD_FOLDER'], 'usr_upload.jpg')
+            new_save_path = os.path.join(app.config['UPLOAD_FOLDER'], usr_upload_fnames[-1])
             utils.save(img, new_save_path)
 
-            return render_template(
-                "starter-template.html",
-                char_upload=url_for('static', filename=os.path.join('img/usr_upload.jpg')),
-                char_placeholder=char_placeholder,
-                results=[]
+            print request.url
+
+            r = make_response(
+                    render_template(
+                        "starter-template.html",
+                        char_upload=request.url_root+'dynamic/{0}'.format(usr_upload_fnames[-1]),
+                        char_placeholder=char_placeholder,
+                        results=[]
+                    )
                 )
+
+            return add_headers(r)
+
 
 
     ## - - - - - - - - - - - - - - - - - - - - - - - - 
     if request.method == 'GET':
 
         character = request.args.get('character')
+
         if character and len(character) == 1 and character.isalnum():
 
             char_placeholder = character
 
             results = engine.evaluate(
                 character,
-                os.path.join(app.config['UPLOAD_FOLDER'], 'usr_upload.jpg'),
+                os.path.join(app.config['UPLOAD_FOLDER'], usr_upload_fnames[-1]),
                 app.config['UPLOAD_FOLDER'],
                 n_random=100
                 )
 
-            return render_template(
-                "starter-template.html",
-                char_upload=url_for('static', filename=os.path.join('img/usr_upload.jpg')),
-                char_placeholder=char_placeholder,
-                results=results
+            r = make_response(
+                    render_template(
+                        "starter-template.html",
+                        char_upload=request.url_root+'dynamic/{0}'.format(usr_upload_fnames[-1]),
+                        char_placeholder=char_placeholder,
+                        results=results
+                    )
                 )
+
+            return add_headers(r)
 
         else:
-
-            return render_template(
-                "starter-template.html",
-                char_upload=url_for('static', filename='img/M.png'),
-                char_placeholder=char_placeholder,
-                results=[]
+            r = make_response(
+                    render_template(
+                        "starter-template.html",
+                        char_upload=url_for('static', filename='img/M.png'),
+                        char_placeholder=char_placeholder,
+                        results=[]
+                    )
                 )
+
+            return add_headers(r)
 
 
 

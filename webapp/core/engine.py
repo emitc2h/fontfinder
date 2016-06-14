@@ -8,7 +8,7 @@ from sqlalchemy_utils import database_exists, create_database
 import psycopg2
 import pandas as pd
 import numpy as np
-import cv2, os
+import cv2, os, random, string
 
 d=48
 
@@ -61,6 +61,7 @@ def train_net(char, img, n_random=10):
     X_train, y_train = utils.generate_training_sample(char, img, flist, n_random)
 
     p1=2
+    p2=2
 
     ## Specify the neural network configuration
     nn = NeuralNetwork(
@@ -77,6 +78,11 @@ def train_net(char, img, n_random=10):
                 n_features=64,
                 pooling='max',
             ),
+            # ConvLayer(
+            #     img_size=(d/(p1*p2),d/(p1*p2)),
+            #     n_features=128,
+            #     pooling='max',
+            # ),
             Layer(
                 n_neurons=512,
                 activation='relu'
@@ -84,11 +90,11 @@ def train_net(char, img, n_random=10):
         ],
         learning_algorithm='Adam',
         cost_function='log-likelihood',
-        learning_rate=5e-3,
+        learning_rate=1e-3,
         early_stopping=False,
         stagnation=10,
         n_epochs=50,
-        mini_batch_size=y_train.shape[0]
+        mini_batch_size=y_train.shape[0]//10
         )
 
     ## Fit the model
@@ -113,7 +119,6 @@ def evaluate(char, img_path, upload_path, n_random=100):
 
     ## Retrieve full database
     df = pd.read_sql_query('SELECT DISTINCT name, url, licensing, local_path1 FROM font_metadata;', connect_to_db())
-    df = df.head(1000)
 
     scores = []
     images = []
@@ -161,7 +166,9 @@ def evaluate(char, img_path, upload_path, n_random=100):
 
     for idx, row in top20.iterrows():
 
-        img_name ='{0}.jpg'.format(i)
+        random_string = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10))
+
+        img_name ='{0}.jpg'.format(random_string)
         img_path = os.path.join(upload_path, img_name)
 
         cv2.imwrite(img_path, images[row['img_idx']])
@@ -171,12 +178,31 @@ def evaluate(char, img_path, upload_path, n_random=100):
             'licensing' : row['licensing'],
             'url'       : row['url'],
             'origin'    : 'dafont.com',
-            'img_path'  : os.path.join('img', img_name)
+            'img_path'  : img_name
             }
 
         results.append(result)
 
         i += 1
+
+    ## Dump a grid image of the 10000 first results
+    sorted_img_idx = df['img_idx'].values
+
+    font_index = 0
+    y_fonts = []
+
+    for i in range(100):
+        x_fonts = []
+        for j in range(100):
+            img = images[sorted_img_idx[font_index]]
+            x_fonts.append(img)
+            font_index += 1
+
+        y_fonts.append(np.hstack(x_fonts))
+        
+    all_fonts = np.vstack(y_fonts)
+
+    cv2.imwrite(os.path.join(upload_path, 'out.png'), all_fonts)
 
     return results
 
