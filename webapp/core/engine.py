@@ -10,6 +10,10 @@ import pandas as pd
 import numpy as np
 import cv2, os, random, string
 
+## Interacting with AWS S3 bucket
+import boto
+from boto.s3.key import Key
+
 d=48
 
 ## --------------------------------------
@@ -18,11 +22,20 @@ def connect_to_db():
     Connect to the fonts database
     """
 
-    dbname = 'fonts_db'
-    user   = 'mtm'
-    pswd   = ''
+    host   = 'fontdbinstance.c9mwqfkzqqmh.us-west-2.rds.amazonaws.com:5432'
+    dbname = 'fontdb'
 
-    engine     = create_engine('postgresql://%s:%s@localhost/%s'%(user,pswd,dbname))
+    username = ''
+    pswd = ''
+
+    with open('db_credentials', 'r') as f:
+        credentials = f.readlines()
+        f.close()
+    
+        username = credentials[0].rstrip()
+        pswd     = credentials[1].rstrip()
+
+    engine     = create_engine('postgresql://{0}:{1}@{2}/{3}'%(user,pswd,host,dbname))
     connection = psycopg2.connect(database = dbname, user = user)
 
     return connection
@@ -73,28 +86,27 @@ def train_net(char, img, n_random=10):
                 pooling='max',
                 pooling_size=(p1,p1),
             ),
-            # ConvLayer(
-            #     img_size=(d/p1,d/p1),
-            #     n_features=64,
-            #     pooling='max',
-            # ),
+            ConvLayer(
+                img_size=(d/p1,d/p1),
+                n_features=64,
+                pooling='max',
+            ),
             # ConvLayer(
             #     img_size=(d/(p1*p2),d/(p1*p2)),
             #     n_features=128,
             #     pooling='max',
             # ),
             Layer(
-                n_neurons=1024,
+                n_neurons=512,
                 activation='relu'
             )
         ],
         learning_algorithm='Adam',
         cost_function='log-likelihood',
-        learning_rate=1e-4,
-        early_stopping=False,
-        stagnation=10,
+        learning_rate=2e-4,
+        target_accuracy=1.0,
         n_epochs=50,
-        mini_batch_size=y_train.shape[0]//10
+        mini_batch_size=y_train.shape[0]
         )
 
     ## Fit the model

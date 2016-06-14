@@ -6,6 +6,10 @@ import cv2
 
 import os, math
 
+import boto
+from boto.s3.key import Key
+from cStringIO import StringIO
+
 ## -------------------------------------
 def read_img(path):
     """
@@ -23,6 +27,31 @@ def read_img(path):
     else:
         return np.asarray(Image.open(path)).astype('uint8')
 
+
+
+
+## -------------------------------------
+def read_img_from_s3(bucket_key):
+    """
+    Returns an image read from s3 bucket
+    """
+
+    ## Connect to S3, get bucket (Assumes credentials exist in ~/.boto)
+    s3 = boto.connect_s3()
+    bucket = s3.get_bucket('fontfinder-fontfiles', validate=False)
+
+    ## Create and assign key
+    k = Key(bucket)
+    k.key = bucket_key
+
+    assert k.exists(), 'Image does not exist on fontfinder-fontfiles S3 bucket'
+
+    ## Get image as string, convert to file, load with PIL
+    s = k.get_contents_as_string()
+    pil_img = Image.open(StringIO(s))
+
+    ## Convert to numpy array and return
+    return np.array(pil_img.getdata()).reshape(48, 48)
 
 
 
