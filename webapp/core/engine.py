@@ -137,7 +137,7 @@ def evaluate(char, img_path, upload_path, n_random=10):
     df = pd.read_sql_query('SELECT DISTINCT name, url, licensing, aws_bucket_key FROM font_metadata;', connect_to_db())
 
     scores = []
-    #images = []
+    images = []
 
     progress = 0
     complete = len(df)
@@ -163,14 +163,14 @@ def evaluate(char, img_path, upload_path, n_random=10):
         norm_image = np.multiply(image, 1.0/255.0)
         norm_image.shape = (1,d*d)
 
-        #images.append(image)
+        images.append(image)
 
         score = nn.predict_proba(norm_image)[0][0]
         scores.append(score)
 
         progress += 1
 
-    image_idx = range(len(images))
+    image_idx = range(len(scores))
 
     df['score']   = scores
     df['img_idx'] = image_idx
