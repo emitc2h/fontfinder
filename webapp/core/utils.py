@@ -3,7 +3,7 @@ import numpy as np
 from scipy import signal
 import cv2
 
-import os, math
+import os, math, random
 
 import boto
 from boto.s3.key import Key
@@ -66,7 +66,7 @@ def read_img_from_s3(bucket_key):
 ## -------------------------------------
 def bw_img(img):
     """
-    Returns normalized black and white image
+    Returns black and white image
     """
 
     if len(img.shape) > 2 and img.shape[2] > 1:
@@ -503,12 +503,27 @@ def rotate_variations(img, angles=[]):
 ## ----------------------------------------
 def pixbypix_similarity(img1, img2):
     """
-    Determines the pixel by pixel similarity of two images
+    Determines the pixel by pixel similarity of two images,
+    assumes images are float normalized
     """
     
     assert img1.shape == img2.shape, 'Images should be of the same size'
     
-    return 1.0 - np.sum(np.absolute(np.subtract(img1, img2)))/(img1.shape[0]*img1.shape[1]*img1.ptp())
+    return 1.0 - np.sum(np.absolute(np.subtract(img1, img2)))/(img1.shape[0]*img1.shape[1])
+
+
+
+## ----------------------------------------
+def normalize(img):
+    """
+    Normalize an image to range 0.0-1.0 float32
+    """
+
+    ptp = np.ptp(img)
+    if ptp > 0
+        return np.multiply(np.add(img, -np.min(img)), 1.0/np.ptp(img))
+    else:
+        return np.zeros(img.shape)
 
 
 
@@ -522,35 +537,31 @@ def generate_noise(imgsize=100):
 
 
 ## ----------------------------------------
-def generate_training_sample(char, img, font_list, n_random=10):
+def generate_training_sample(char, img, char_dict, n_random=10):
     """
     A function to generate the training sample
     """
     
     ## normalize the image
-    norm_img = np.multiply(np.add(img, -np.min(img)), 1.0/np.ptp(img))
+    norm_img = normalize(img)
     
     ## Get image dimensions
     w,h = norm_img.shape
     assert w == h, 'Char image should be square'
     
     ## Obtain random fonts
-    random = []
+    random_fonts = []
 
-    while len(random) < n_random:
+    char_dict_keys = char_dict.keys()
 
-        random_font = np.random.choice(font_list, 1)[0]
-        random_font_key = '{0}/{1}.jpg'.format(random_font.split('.')[0], char)
+    while len(random_fonts) < n_random:
 
-        try:
-            rdn_img = utils.read_img_from_s3(random_font_key)
-        except:
-            continue
+        rdn_img = char_dict[random.choice(char_dict_keys)]
 
-        rdn_norm_img = np.multiply(rdn_img, 1.0/255)
+        rdn_norm_img = normalize(rdn_img)
         pbp          = pixbypix_similarity(rdn_norm_img, norm_img)
         if (pbp < 0.75) or (pbp > 0.99): continue
-        random.append(np.ravel(rdn_norm_img))
+        random_fonts.append(np.ravel(rdn_norm_img))
 
     ## Put together the different types of training samples
     n_noise = 50
@@ -571,7 +582,7 @@ def generate_training_sample(char, img, font_list, n_random=10):
 
     signal = [np.ravel(var) for var in variations]
 
-    X = np.stack(signal + noise + zeros + random, axis=0)
+    X = np.stack(signal + noise + zeros + random_fonts, axis=0)
     y = np.array([0]*len(signal) + [1]*n_noise + [2]*n_zeros + range(3, n_random+3))
     
     return X,y

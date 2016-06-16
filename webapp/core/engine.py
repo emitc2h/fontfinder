@@ -47,38 +47,20 @@ def connect_to_db():
 
 
 
-## ---------------------------------------
-def get_fontpath_list(connection):
-    """
-    Get the list of font paths in the DB
-    """
-
-    query = '''
-        SELECT DISTINCT aws_bucket_key FROM font_metadata;
-    '''
-
-    query_results = pd.read_sql_query(query,connection)
-
-    return list(query_results['aws_bucket_key'].values)
-
-
-
-
 ## ----------------------------------------
-def train_net(char, img, n_random=10):
+def train_net(char, img, char_dict, n_random=10):
     """
     Trains the neural network
     """
 
     ## Connect to database 
     con   = connect_to_db()
-    flist = get_fontpath_list(con)
 
     ## Generate the training dataset
-    X_train, y_train = utils.generate_training_sample(char, img, flist, n_random)
+    X_train, y_train = utils.generate_training_sample(char, img, char_dict, n_random)
 
     p1=2
-    p2=2
+    p2=4
 
     ## Specify the neural network configuration
     nn = NeuralNetwork(
@@ -86,7 +68,7 @@ def train_net(char, img, n_random=10):
             ConvLayer(
                 img_size=(d,d),
                 patch_size=(5,5),
-                n_features=64,
+                n_features=32,
                 pooling='max',
                 pooling_size=(p1,p1),
             ),
@@ -94,6 +76,7 @@ def train_net(char, img, n_random=10):
                 img_size=(d/p1,d/p1),
                 n_features=64,
                 pooling='max',
+                pooling_size=(p2,p2)
             ),
             # ConvLayer(
             #     img_size=(d/(p1*p2),d/(p1*p2)),
@@ -101,14 +84,14 @@ def train_net(char, img, n_random=10):
             #     pooling='max',
             # ),
             Layer(
-                n_neurons=512,
+                n_neurons=128,
                 activation='relu'
             )
         ],
         learning_algorithm='Adam',
         cost_function='log-likelihood',
-        learning_rate=2e-4,
-        target_accuracy=1.0,
+        learning_rate=8e-3,
+        target_accuracy=0.99,
         n_epochs=50,
         mini_batch_size=y_train.shape[0]
         )
@@ -119,7 +102,7 @@ def train_net(char, img, n_random=10):
     return nn
 
 ## ----------------------------------------
-def evaluate(char, img_path, upload_path, n_random=10):
+def evaluate(char, img_path, upload_path, char_dict, n_random=10):
     """
     train and evaluate the model
     """
@@ -131,13 +114,12 @@ def evaluate(char, img_path, upload_path, n_random=10):
     print '- '*25
 
     ## train the neural net
-    nn = train_net(char, img, n_random)
+    nn = train_net(char, img, char_dict, n_random)
 
     ## Retrieve full database
     df = pd.read_sql_query('SELECT DISTINCT name, url, licensing, aws_bucket_key FROM font_metadata;', connect_to_db())
 
     scores = []
-    images = []
 
     progress = 0
     complete = len(df)
@@ -149,23 +131,23 @@ def evaluate(char, img_path, upload_path, n_random=10):
 
     for font in df['aws_bucket_key']:
 
-        ## Generate proper key string
-        bucket_key = '{0}/{1}.jpg'.format(font.split('.')[0], char)
-
-        if progress%100 == 0:
+        if progress%1000 == 0:
             print 'progress {0}/{1}'.format(progress, complete)
 
         try:
-            image = utils.read_img_from_s3(bucket_key)
-        except AssertionError:
-            image = np.zeros((d,d), dtype='uint8')
+            image = char_dict[font]
+        except KeyError:
+            image = np.zeros((d,d))
 
-        norm_image = np.multiply(image, 1.0/255.0)
-        norm_image.shape = (1,d*d)
+        norm_image = utils.normalize(image)
+        norm_img   = utils.normalize(img)
 
-        images.append(image)
+        if utils.pixbypix_similarity(norm_img, norm_image) < 0.85:
+            score = 0
+        else:
+            norm_image.shape = (1,d*d)
+            score = nn.predict_proba(norm_image)[0][0]
 
-        score = nn.predict_proba(norm_image)[0][0]
         scores.append(score)
 
         progress += 1
@@ -190,7 +172,10 @@ def evaluate(char, img_path, upload_path, n_random=10):
         img_name ='{0}.jpg'.format(random_string)
         img_path = os.path.join(upload_path, img_name)
 
-        cv2.imwrite(img_path, images[row['img_idx']])
+        try:
+            cv2.imwrite(img_path, char_dict[row['aws_bucket_key']])
+        except KeyError:
+            cv2.imwrite(img_path, np.zeros((48,48), dtype='uint8'))
 
         result = {
             'name'      : row['name'],

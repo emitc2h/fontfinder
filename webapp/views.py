@@ -6,6 +6,7 @@ from webapp import app
 from core import utils, engine
 
 import os, datetime, random, string
+import cPickle as pickle
 
 from werkzeug.utils import secure_filename
 
@@ -109,11 +110,16 @@ def index():
 
             char_placeholder = character
 
+            local_path = os.path.join('/', 'home', 'ubuntu', 'fontfinder', 's3')
+
+            char_dict = pickle.load( open( os.path.join(local_path, '{0}.p'.format(character)), 'rb' ) )
+
             results = engine.evaluate(
                 character,
                 os.path.join(app.config['UPLOAD_FOLDER'], usr_upload_fnames[-1]),
                 app.config['UPLOAD_FOLDER'],
-                n_random=0
+                char_dict,
+                n_random=100
                 )
 
             r = make_response(
