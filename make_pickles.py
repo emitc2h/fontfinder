@@ -18,7 +18,7 @@ from webapp.core.utils import generate_letter_image
 connection = connect_to_db()
 
 query = '''
-        SELECT DISTINCT aws_bucket_key FROM font_metadata;
+        SELECT DISTINCT aws_bucket_key FROM font_metadata ORDER BY aws_bucket_key;
         '''
 
 ## Retrieve data
