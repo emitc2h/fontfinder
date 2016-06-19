@@ -19,38 +19,41 @@
   <h2>Seen a font that inspires you?<br />You'd like to find it or something similar?</h2>
   </div>
 
-<br />
+<br /><br />
 
 <!-- USER IMAGE UPLOAD -->
 <div>
-  <p class="lead">upload an image of a single character in the font you are looking for</p>
   <form action="" method=post enctype=multipart/form-data>
+    <p class="lead" style="margin-bottom:8px;">upload an image of a single character in the font you want</p>
     <div class="row">
-      <div class="col-xs-6" style="padding-top:15px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
-        <img src={{ char_upload }} class="img-thumbnail" style="float: right;">
+      <div class="col-xs-6" style="padding-top:0px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
+        <img src={{ char_upload }} class="img-thumbnail" style="float:right;">
       </div>
-      <div class="col-xs-6" style="padding-top:15px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
+      <div class="col-xs-6" style="padding-top:0px; padding-bottom:15px; padding-left:0px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
         <p>
-          <input type=file name=file style="float: left;">
+          <input type=file name=file style="float:left;">
           <br />
-          <input type=submit value=upload style="float: left;  margin-top:8px;">
+          <input type=submit value=upload class="btn btn-default btn" style="float:left; margin-top:4px; width:77px; border-radius:5px; border: 1px solid rgb(200,200,200);">
         </p>
       </div>
     </div>
   </form>
 </div>
 
+<br /><br />
+
 <!-- CHARACTER INPUT -->
-<br />
-<p class="lead">what character is it?</p>
 <form  action="/search" method="GET">
   <div class="form-group">
-    <label for="birth_month">Character:</label>
-    <input type="text" id="character" name="character" placeholder={{ char_placeholder }}>
-  </div>
-
-  <div>
-    <button type="submit" class="btn btn-default btn">Match!</button>
+    <p class="lead" style="margin-bottom:8px;">specify which character, then launch the search</p>
+    <div class="row">
+      <div class="col-xs-6" style="padding-top:0px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
+        <input type="text" id="character" name="character" placeholder={{ char_placeholder }} style="text-align: center; width:53px; height:53px; font-size:40px; font-weight:lighter; border-radius:5px; border: 1px solid rgb(200,200,200); float:right;" maxlength="1">
+      </div>
+      <div class="col-xs-6" style="padding-top:0px; padding-bottom:15px; padding-left:0px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
+        <button type="submit" class="btn btn-default btn" style="font-size:16px; font-weight:bold; width:77px; height:53px; float:left;">search</button>
+      </div>
+    </div>
   </div>
 </form>
 
@@ -66,7 +69,7 @@
     <div class="col-xs-6 col-sm-3" style="padding-top:15px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
       <img src={{ request.url_root + 'dynamic/' + result['img_path'] }} class="img-thumbnail">
       <h4 class="list-group-item-heading"> {{ result['name'] }} </h4>
-      <p class="list-group-item-text" style="font-style: italic; font-size:8pt; color:rgb(155,155,155);"> {{ result['file'] }} </p>
+      <p class="list-group-item-text" style="font-style: italic; font-size:8pt; color:rgb(155,155,155)"> {{ result['file'] }} </p>
       <p class="list-group-item-text"> {{ result['licensing'] }} </p>
       <a href={{ result['url'] }} target="_blank">
         <p class="list-group-item-text"> {{ result['origin'] }}</p>
