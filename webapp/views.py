@@ -1,11 +1,11 @@
-from flask import render_template, request, flash, redirect, url_for, send_from_directory, make_response
+from flask import render_template, request, flash, redirect, url_for, send_from_directory, make_response, Response
 from functools import wraps, update_wrapper
 from datetime import datetime
 from webapp import app
 
 from core import utils, engine
 
-import os, datetime, random, string
+import os, datetime, random, string, time
 import cPickle as pickle
 
 from werkzeug.utils import secure_filename
@@ -40,7 +40,7 @@ def send_file(filename):
 
 
 @app.route('/', methods=['GET', 'POST'])
-@app.route('/index', methods=['GET', 'POST'])
+@app.route('/search', methods=['GET', 'POST'])
 ## ==============================================
 def index():
     """
@@ -90,7 +90,7 @@ def index():
 
             r = make_response(
                     render_template(
-                        "starter-template.html",
+                        "search.html",
                         char_upload=request.url_root+'dynamic/{0}'.format(usr_upload_fnames[-1]),
                         char_placeholder=char_placeholder,
                         results=[]
@@ -129,7 +129,7 @@ def index():
 
             r = make_response(
                     render_template(
-                        "starter-template.html",
+                        "search.html",
                         char_upload=request.url_root+'dynamic/{0}'.format(usr_upload_fnames[-1]),
                         char_placeholder=char_placeholder,
                         results=grid_results
@@ -141,7 +141,7 @@ def index():
         else:
             r = make_response(
                     render_template(
-                        "starter-template.html",
+                        "search.html",
                         char_upload=url_for('static', filename='img/M.png'),
                         char_placeholder=char_placeholder,
                         results=[]
@@ -153,11 +153,53 @@ def index():
 
 
 
+@app.route('/tips-and-tricks')
+## ==============================================
+def tips_and_tricks():
+    """
+    tips and tricks page
+    """
+
+    return render_template('tips-and-tricks.html')
 
 
 
 
+@app.route('/about')
+## ==============================================
+def about():
+    """
+    about page
+    """
 
+    return render_template('about.html')
+
+
+
+
+@app.route('/contact')
+## ==============================================
+def contact():
+    """
+    tips and tricks page
+    """
+
+    return render_template('contact.html')
+
+
+
+
+@app.route('/progress')
+## ==============================================
+def progress():
+    def generate():
+        x = 0
+        while x < 100:
+            print x
+            x += 10
+            time.sleep(1)
+            yield 'data:{0}\n\n'.format(x)
+    return Response(generate(), mimetype='text/event-stream')
 
 
 

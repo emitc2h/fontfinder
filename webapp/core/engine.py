@@ -10,10 +10,6 @@ import pandas as pd
 import numpy as np
 import cv2, os, random, string, math
 
-## Interacting with AWS S3 bucket
-import boto
-from boto.s3.key import Key
-
 d=48
 
 ## --------------------------------------

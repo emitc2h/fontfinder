@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block body %}
+
+<!-- NAVIGATION BAR -->
+<div class="masthead">
+  <nav>
+    <ul class="nav nav-justified">
+      <li><a href="search">search</a></li>
+      <li class="active"><a href="#">tips and tricks</a></li>
+      <li><a href="about">about</a></li>
+      <li><a href="contact">contact</a></li>
+    </ul>
+  </nav>
+</div>
+
+<!-- TIPS -->
+<br />
+<h1>Tips and Tricks for Optimal Results</h1>
+<br />
+<div class="row">
+  <div class="col-md-4">
+    <h2>Isolated Character</h2>
+    <p class="lead">Make sure there really is a single character in the image you upload, and that the character does not touch the edges of the image.</p>
+  </div>
+  <div class="col-md-4">
+    <h2>Head-on View</h2>
+    <p class="lead">The algorithm can tolerate small angles, but a head-on view of the character will provide optimal results.</p>
+  </div>
+  <div class="col-md-4">
+    <h2> Only Two Colors Allowed</h2>
+    <p class="lead">Best results will be obtained when the character and the background are of different but uniform colors.</p>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block body %}
+
+<!-- NAVIGATION BAR -->
+<div class="masthead">
+  <nav>
+    <ul class="nav nav-justified">
+      <li class="active"><a href="#">search</a></li>
+      <li><a href="tips-and-tricks">tips and tricks</a></li>
+      <li><a href="about">about</a></li>
+      <li><a href="contact">contact</a></li>
+    </ul>
+  </nav>
+</div>
+
+<!-- INTRODUCTION -->
+<div class="starter-template">
+  <div>
+  <h2>Seen a font that got you inspired?<br />You'd like to find it or something similar?</h2>
+  </div>
+
+<br />
+
+<!-- USER IMAGE UPLOAD -->
+<div>
+  <p class="lead">upload an image of a single character in the font you are looking for</p>
+  <form action="" method=post enctype=multipart/form-data>
+    <div class="row">
+      <div class="col-xs-6" style="padding-top:15px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
+        <img src={{ char_upload }} class="img-thumbnail" style="float: right;">
+      </div>
+      <div class="col-xs-6" style="padding-top:15px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
+        <p>
+          <input type=file name=file style="float: left;">
+          <br />
+          <input type=submit value=upload style="float: left;  margin-top:8px;">
+        </p>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- CHARACTER INPUT -->
+<br />
+<p class="lead">what character is it?</p>
+<form  action="/search" method="GET">
+  <div class="form-group">
+    <label for="birth_month">Character:</label>
+    <input type="text" id="character" name="character" placeholder={{ char_placeholder }}>
+  </div>
+
+  <div>
+    <button type="submit" class="btn btn-default btn">Match!</button>
+  </div>
+</form>
+
+<!-- RESULTS -->
+{% if results %}
+<div class="page-header">
+  <h1>Results</h1>
+</div>
+<div>
+  {% for result_row in results %}
+  <div class="row">
+    {% for result in result_row %}
+    <div class="col-xs-6 col-sm-3" style="padding-top:15px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
+      <img src={{ request.url_root + 'dynamic/' + result['img_path'] }} class="img-thumbnail">
+      <h4 class="list-group-item-heading"> {{ result['name'] }} </h4>
+      <p class="list-group-item-text" style="font-style: italic; font-size:8pt; color:rgb(155,155,155);"> {{ result['file'] }} </p>
+      <p class="list-group-item-text"> {{ result['licensing'] }} </p>
+      <a href={{ result['url'] }} target="_blank">
+        <p class="list-group-item-text"> {{ result['origin'] }}</p>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

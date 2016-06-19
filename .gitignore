@@ -15,3 +15,5 @@ flaskexample/
 *.GIF
 *.jpeg
 *.JPEG
+s3/
+db_credentials
