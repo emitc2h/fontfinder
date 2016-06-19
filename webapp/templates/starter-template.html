@@ -49,52 +49,62 @@
         <h1>FontFinder</h1>
 
         <div>
-        <p class="lead">Seen a font that you like that you would like to use? Can't find it? You've come to the right place!<br><br> First, upload an image of a single character in the font you are looking for.</p>
-      </div>
-
-      <div>
-        <img src={{ char_upload }} class="img-thumbnail">
+        <p class="lead">Seen a font that got you inspired?</p>
+        <p class="lead">Can't find it?</p>
+        <p class="lead" id="rightplace" style="font-weight: bold;">You've come to the right place!</p>
+        <p></p>
+        <p class="lead">First, upload an image of a single character in the font you are looking for.</p>
       </div>
 
       <div>
         <form action="" method=post enctype=multipart/form-data>
-          <p>
-            <input type=file name=file>
-            <input type=submit value=upload>
-          </p>
+          <div class="row">
+            <div class="col-xs-6 col-md-4" style="padding-top:15px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
+              <img src={{ char_upload }} class="img-thumbnail" style="float: right;">
+            </div>
+            <div class="col-xs-6 col-md-4" style="padding-top:15px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
+              <p>
+                <input type=file name=file style="float: left;">
+                <br />
+                <input type=submit value=upload style="float: left;  margin-top:8px;">
+              </p>
+            </div>
+          </div>
         </form>
       </div>
 
+      <br></br>
       <p class="lead">What character is it?</p>
 
       <form  action="/index" method="GET">
         <div class="form-group">
           <label for="birth_month">Character:</label>
-          <input type="text" id="character" name='character' placeholder={{ char_placeholder }}>
+          <input type="text" id="character" name="character" placeholder={{ char_placeholder }}>
         </div>
 
         <div>
-          <button type="submit" class="btn btn-default btn">find my font!</button>
+          <button type="submit" class="btn btn-default btn">Match!</button>
         </div>
       </form>
 
       <div class="page-header">
         <h1>Results</h1>
       </div>
-      <div class="col-sm-6">
-        {% for result in results %}
-        <a href={{ result['url'] }} class="list-group-item" target="_blank">
-          <div class="row">
-            <div class="col-xs-6">
-              <img src={{ request.url_root + 'dynamic/' + result['img_path'] }} class="img-thumbnail">
-            </div>
-            <div class="col-md-8">
-              <h4 class="list-group-item-heading"> {{ result['name'] }} </h4>
-              <p class='list-group-item-text'> {{ result['licensing'] }} </p>
-              <p class='list-group-item-text'> {{ result['origin'] }}</p>
-            </div>
+      <div>
+        {% for result_row in results %}
+        <div class="row">
+          {% for result in result_row %}
+          <div class="col-xs-6 col-sm-3" style="padding-top:15px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
+            <img src={{ request.url_root + 'dynamic/' + result['img_path'] }} class="img-thumbnail">
+            <h4 class="list-group-item-heading"> {{ result['name'] }} </h4>
+            <p class="list-group-item-text" style="font-style: italic; font-size:8pt; color:rgb(155,155,155);"> {{ result['file'] }} </p>
+            <p class="list-group-item-text"> {{ result['licensing'] }} </p>
+            <a href={{ result['url'] }} target="_blank">
+              <p class="list-group-item-text"> {{ result['origin'] }}</p>
+            </a>
           </div>
-        </a>
+          {% endfor %}
+        </div>
         {% endfor %}
       </div>
 

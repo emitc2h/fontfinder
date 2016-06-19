@@ -53,14 +53,11 @@ def train_net(char, img, char_dict, n_random=10):
     Trains the neural network
     """
 
-    ## Connect to database 
-    con   = connect_to_db()
-
     ## Generate the training dataset
     X_train, y_train = utils.generate_training_sample(char, img, char_dict, n_random)
 
     p1=2
-    p2=4
+    p2=2
 
     ## Specify the neural network configuration
     nn = NeuralNetwork(
@@ -74,26 +71,22 @@ def train_net(char, img, char_dict, n_random=10):
             ),
             ConvLayer(
                 img_size=(d/p1,d/p1),
+                patch_size=(5,5),
                 n_features=64,
                 pooling='max',
                 pooling_size=(p2,p2)
             ),
-            # ConvLayer(
-            #     img_size=(d/(p1*p2),d/(p1*p2)),
-            #     n_features=128,
-            #     pooling='max',
-            # ),
             Layer(
-                n_neurons=128,
+                n_neurons=512,
                 activation='relu'
             )
         ],
         learning_algorithm='Adam',
         cost_function='log-likelihood',
-        learning_rate=8e-3,
-        target_accuracy=0.99,
-        n_epochs=50,
-        mini_batch_size=y_train.shape[0]
+        learning_rate=1e-3,
+        target_accuracy=1.0,
+        n_epochs=20,
+        mini_batch_size=y_train.shape[0]//5
         )
 
     ## Fit the model
@@ -102,7 +95,7 @@ def train_net(char, img, char_dict, n_random=10):
     return nn
 
 ## ----------------------------------------
-def evaluate(char, img_path, upload_path, char_dict, n_random=10):
+def evaluate(char, img_path, upload_path, char_dict, n_random=200):
     """
     train and evaluate the model
     """
@@ -142,11 +135,13 @@ def evaluate(char, img_path, upload_path, char_dict, n_random=10):
         norm_image = utils.normalize(image)
         norm_img   = utils.normalize(img)
 
-        if utils.pixbypix_similarity(norm_img, norm_image) < 0.85:
+        if abs(utils.pix_occupancy(norm_img) - utils.pix_occupancy(norm_image)) > 0.10 or \
+           utils.pixbypix_similarity(norm_img, norm_image) < 0.80:
             score = 0
         else:
             norm_image.shape = (1,d*d)
-            score = nn.predict_proba(norm_image)[0][0]
+            pred = nn.predict_proba(norm_image)[0]
+            score = pred[0]/np.mean(pred[1:])
 
         scores.append(score)
 
@@ -161,11 +156,11 @@ def evaluate(char, img_path, upload_path, char_dict, n_random=10):
 
     results = []
 
-    top20 = df.head(20)
+    top = df.head(32)
 
     i = 0
 
-    for idx, row in top20.iterrows():
+    for idx, row in top.iterrows():
 
         random_string = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10))
 
@@ -173,14 +168,16 @@ def evaluate(char, img_path, upload_path, char_dict, n_random=10):
         img_path = os.path.join(upload_path, img_name)
 
         try:
-            cv2.imwrite(img_path, char_dict[row['aws_bucket_key']])
+            cv2.imwrite(img_path, 255 - char_dict[row['aws_bucket_key']])
         except KeyError:
-            cv2.imwrite(img_path, np.zeros((48,48), dtype='uint8'))
+            cv2.imwrite(img_path, 255 - np.zeros((48,48), dtype='uint8'))
 
         result = {
             'name'      : row['name'],
             'licensing' : row['licensing'],
             'url'       : row['url'],
+            'score'     : '{0:.0f}% match quality'.format(row['score']*100),
+            'file'      : os.path.split(row['aws_bucket_key'])[-1],
             'origin'    : 'dafont.com',
             'img_path'  : img_name
             }

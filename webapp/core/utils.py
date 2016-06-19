@@ -514,13 +514,25 @@ def pixbypix_similarity(img1, img2):
 
 
 ## ----------------------------------------
+def pix_occupancy(img):
+    """
+    Determines the occupancy of white pixels for an image
+    """
+
+    if img.ptp() > 1.0:
+        return np.sum(normalize(img))/(img.shape[0]*img.shape[1])
+    else:
+        return np.sum(img)/(img.shape[0]*img.shape[1])
+
+
+## ----------------------------------------
 def normalize(img):
     """
     Normalize an image to range 0.0-1.0 float32
     """
 
     ptp = np.ptp(img)
-    if ptp > 0
+    if ptp > 0:
         return np.multiply(np.add(img, -np.min(img)), 1.0/np.ptp(img))
     else:
         return np.zeros(img.shape)
@@ -542,6 +554,8 @@ def generate_training_sample(char, img, char_dict, n_random=10):
     A function to generate the training sample
     """
     
+    random.seed(42)
+
     ## normalize the image
     norm_img = normalize(img)
     
@@ -549,10 +563,12 @@ def generate_training_sample(char, img, char_dict, n_random=10):
     w,h = norm_img.shape
     assert w == h, 'Char image should be square'
     
-    ## Obtain random fonts
+    ## Obtain similar enough random fonts
     random_fonts = []
 
     char_dict_keys = char_dict.keys()
+
+    endloop = 0
 
     while len(random_fonts) < n_random:
 
@@ -560,14 +576,23 @@ def generate_training_sample(char, img, char_dict, n_random=10):
 
         rdn_norm_img = normalize(rdn_img)
         pbp          = pixbypix_similarity(rdn_norm_img, norm_img)
-        if (pbp < 0.75) or (pbp > 0.99): continue
-        random_fonts.append(np.ravel(rdn_norm_img))
+        if (pbp < 0.9999):
+            random_fonts.append(np.ravel(rdn_norm_img))
+
+        ## Bail out of the loop if not enough similar fonts are found
+        if endloop > 20000:
+            n_random = len(random_fonts)
+            break
+
+        endloop += 1
+
+    print 'Found {0} fonts for the random sample'.format(n_random)
 
     ## Put together the different types of training samples
-    n_noise = 50
+    n_noise = 0
     noise   = [np.ravel(generate_noise(imgsize=w)) for i in range(n_noise)]
     
-    n_zeros = 10
+    n_zeros = 0
     zeros   = [np.zeros(w*w)]*n_zeros
     
     n_signal = n_random + n_noise + n_zeros
@@ -575,9 +600,9 @@ def generate_training_sample(char, img, char_dict, n_random=10):
     n_variations = n_signal//4
 
     variations = []
-    variations += scale_variations(norm_img, scale_factors=np.linspace(0.7, 0.95, n_variations))
-    variations += skew_variations(norm_img, vertical_shear=np.linspace(-0.1, 0.1, math.ceil(math.sqrt(n_variations))), horizontal_shear=np.linspace(-0.1, 0.1, math.ceil(math.sqrt(n_variations))))
-    variations += rotate_variations(norm_img, angles=np.linspace(-30,30, n_variations))
+    variations += scale_variations(norm_img, scale_factors=np.linspace(0.95, 0.99, n_variations))
+    variations += skew_variations(norm_img, vertical_shear=np.linspace(-0.02, 0.02, math.ceil(math.sqrt(n_variations))), horizontal_shear=np.linspace(-0.02, 0.02, math.ceil(math.sqrt(n_variations))))
+    variations += rotate_variations(norm_img, angles=np.linspace(-5,5, n_variations))
     variations += [norm_img]*n_variations
 
     signal = [np.ravel(var) for var in variations]

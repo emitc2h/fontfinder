@@ -118,16 +118,21 @@ def index():
                 character,
                 os.path.join(app.config['UPLOAD_FOLDER'], usr_upload_fnames[-1]),
                 app.config['UPLOAD_FOLDER'],
-                char_dict,
-                n_random=100
+                char_dict
                 )
+
+            i = 0
+            grid_results = []
+            while i < len(results):
+                grid_results.append(results[i:i+4])
+                i+=4
 
             r = make_response(
                     render_template(
                         "starter-template.html",
                         char_upload=request.url_root+'dynamic/{0}'.format(usr_upload_fnames[-1]),
                         char_placeholder=char_placeholder,
-                        results=results
+                        results=grid_results
                     )
                 )
 
