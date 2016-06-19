@@ -37,17 +37,31 @@ chars = [
 
 local_path = os.path.join('/', 'home', 'ubuntu', 'fontfinder', 's3')
 
+## --------------------------------------------
+## First, create font->index map
+index = 0
+font_index_map = {}
+
+for i,row in df_font_metadata.iterrows():
+    font_index_map[row['aws_bucket_key']] = index
+    index += 1
+
+pickle.dump( font_index_map, open(os.path.join(local_path, 'font_index_map.p'), 'wb'))
+
+
+
+## --------------------------------------------
+## Second, create the numpy arrays
 for char in chars:
 
-    print('Now making pickle for {0} ...'.format(char))
-
-    char_dict = {}
+    print('Now making array for {0} ...'.format(char))
 
     j=0
+    arrays = []
 
     for i,row in df_font_metadata.iterrows():
 
-        if j%1000==0: print('{0}/{1} done'.format(j, n_fonts))
+        if j%10000==0: print('{0}/{1} done'.format(j, n_fonts))
         j+=1
     
         aws_bucket_key = row['aws_bucket_key']
@@ -56,14 +70,14 @@ for char in chars:
         img_path = '{0}/{1}.jpg'.format(local_img_dir, char)
         if not os.path.exists(img_path): continue
 
-        try:
-            img = cv2.imread(img_path)
+        img = cv2.imread(img_path)
+        if img is None:
+            img = np.zeros((48,48), dtype='uint8')
+        else:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        except cv2.error:
-            continue
-            
-        char_dict[aws_bucket_key] = img
 
-    pickle.dump( char_dict, open(os.path.join(local_path, 'newps/{0}.p'.format(char)), 'wb') )
+        arrays.append(img)
+
+    np.save(os.path.join(local_path, char), np.stack(arrays))
 
 print('All Done.')

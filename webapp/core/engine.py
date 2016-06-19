@@ -9,8 +9,10 @@ import psycopg2
 import pandas as pd
 import numpy as np
 import cv2, os, random, string, math
+import cPickle as pickle
 
 d=48
+local_path = os.path.join('/', 'home', 'ubuntu', 'fontfinder')
 
 ## --------------------------------------
 def connect_to_db():
@@ -204,6 +206,175 @@ def evaluate(char, img_path, upload_path, char_dict, n_random=200):
 
     return results
 
+
+## ==============================================
+class Engine(object):
+    """
+    The class that drives the ConvNet learning and evaluating
+    """
+
+    ## ----------------------------------------------
+    def __init__(self):
+        """
+        Constructor
+        """
+
+        ## Accessing character image data
+        self.font_index_map = pickle.load(open(os.path.join(local_path, 's3', 'font_index_map.p'), 'rb'))
+
+        ## Database connection
+        self.dbhost = 'fontdbinstance.c9mwqfkzqqmh.us-west-2.rds.amazonaws.com:5432'
+        self.dbname = 'fontdb'
+        self.connection = None
+        self.connect_to_db()
+
+        ## Neural Network
+        self.nn = None
+        self.X  = None
+        self.y  = None
+
+        ## Training sample parameters
+        self.n_random   = 200
+        self.char_array = None
+
+
+    ## --------------------------------------
+    def connect_to_db(self):
+        """
+        Connect to the fonts database
+        """
+
+        user = ''
+        pswd = ''
+
+        with open(os.path.join(local_path, 'db_credentials'), 'r') as f:
+            credentials = f.readlines()
+            f.close()
+    
+        user = credentials[0].rstrip()
+        pswd = credentials[1].rstrip()
+
+        self.connection = psycopg2.connect(
+            database=self.dbname,
+            user=user,
+            password=pswd,
+            host=self.dbhost.split(':')[0],
+            port=5432)
+
+
+    ## --------------------------------------
+    def load_char_array(self, char):
+        """
+        Loads the character array for a given character
+        """
+
+        self.char_array = np.load(os.path.join(local_path, 's3', '{0}.npy'.format(char)))
+
+
+    ## ----------------------------------------
+    def generate_training_sample(self, char, img):
+        """
+        A function to generate the training samples
+        """
+    
+        random.seed(42)
+
+        ## normalize the image
+        norm_img = utils.normalize(img)
+    
+        ## Get image dimensions
+        w,h = norm_img.shape
+        assert w == h, 'Char image should be square'
+    
+        ## Obtain similar enough random fonts
+        random_fonts = []
+
+        n_fonts = self.char_array.shape[0]
+
+        endloop = 0
+
+        n_random = self.n_random
+
+        while len(random_fonts) < n_random:
+
+            rdn_img = self.char_array[random.randint(0, n_fonts)]
+
+            rdn_norm_img = utils.normalize(rdn_img)
+            pbp          = utils.pixbypix_similarity(rdn_norm_img, norm_img)
+            if (pbp < 0.9999):
+                random_fonts.append(np.ravel(rdn_norm_img))
+
+            ## Bail out of the loop if not enough similar fonts are found
+            if endloop > 20000:
+                n_random = len(random_fonts)
+                break
+
+            endloop += 1
+
+        print 'Found {0} fonts for the random sample'.format(n_random)
+
+        ## Put together the different types of training samples    
+        n_signal = n_random
+
+        n_variations = n_signal//4
+
+        variations = []
+        variations += utils.scale_variations(norm_img, scale_factors=np.linspace(0.95, 0.99, n_variations))
+        variations += utils.skew_variations(norm_img, vertical_shear=np.linspace(-0.02, 0.02, math.ceil(math.sqrt(n_variations))), horizontal_shear=np.linspace(-0.02, 0.02, math.ceil(math.sqrt(n_variations))))
+        variations += utils.rotate_variations(norm_img, angles=np.linspace(-5,5, n_variations))
+        variations += [norm_img]*n_variations
+
+        signal = [np.ravel(var) for var in variations]
+
+        self.X = np.stack(signal + random_fonts, axis=0)
+        self.y = np.array([0]*len(signal) + range(1, n_random+1))
+
+
+    ## --------------------------------------
+    def initialize(self, char, img):
+        """
+        Initializes the neural net
+        """
+
+        ## Load the character array
+        self.load_char_array(char)
+
+        ## Generate the training sample
+        self.generate_training_sample(char, img)
+
+        ## Specify the neural network
+        p1=2
+        p2=2
+
+        ## Specify the neural network configuration
+        self.nn = NeuralNetwork(
+            hidden_layers = [
+                ConvLayer(
+                    img_size=(d,d),
+                    patch_size=(5,5),
+                    n_features=32,
+                    pooling='max',
+                    pooling_size=(p1,p1),
+                ),
+                ConvLayer(
+                    img_size=(d/p1,d/p1),
+                    patch_size=(5,5),
+                    n_features=64,
+                    pooling='max',
+                    pooling_size=(p2,p2)
+                ),
+                Layer(
+                    n_neurons=512,
+                    activation='relu'
+                )
+            ],
+            learning_algorithm='Adam',
+            cost_function='log-likelihood',
+            learning_rate=1e-3,
+            target_accuracy=1.0,
+            n_epochs=20,
+            mini_batch_size=self.y.shape[0]//5
+        )
 
 
 
