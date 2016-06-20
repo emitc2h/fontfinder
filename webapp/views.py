@@ -116,7 +116,10 @@ def index():
             keep_going = True
             while(keep_going):
                 accuracy, keep_going = engine.iteration(y)
+                print accuracy
+
             engine.prepare_evaluation()
+            
             for i in range(100):
                 print i
                 engine.evaluate_one_percent()

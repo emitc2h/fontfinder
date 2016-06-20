@@ -401,7 +401,7 @@ class Engine(object):
             learning_algorithm='Adam',
             cost_function='log-likelihood',
             learning_rate=1e-3,
-            target_accuracy=1.0,
+            target_accuracy=0.98,
             n_epochs=20,
             mini_batch_size=self.y.shape[0]//5
         )
@@ -417,7 +417,7 @@ class Engine(object):
         Do one iteration
         """
 
-        return self.nn.epoch(self.X, y_one_hot, True, self.X, y_one_hot)
+        return self.nn.epoch(self.X, y_one_hot, False, self.X, y_one_hot)
 
 
 
