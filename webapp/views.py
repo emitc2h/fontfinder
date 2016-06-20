@@ -1,9 +1,9 @@
 from flask import render_template, request, flash, redirect, url_for, send_from_directory, make_response, Response
 from functools import wraps, update_wrapper
 from datetime import datetime
-from webapp import app
+from webapp import app, engine
 
-from core import utils, engine
+from core import utils
 
 import os, datetime, random, string, time
 import cPickle as pickle
@@ -80,18 +80,18 @@ def index():
 
             ## preprocess the image and save again
             random_fname = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5)) + '.jpg'
-            usr_upload_fnames.append(random_fname)
-
             img = utils.preprocess(save_path, imgsize=48)
-            new_save_path = os.path.join(app.config['UPLOAD_FOLDER'], usr_upload_fnames[-1])
-            utils.save(img, new_save_path)
+            engine.get_user_image(random_fname, img)
+
+            new_save_path = os.path.join(app.config['UPLOAD_FOLDER'], engine.user_image_path)
+            utils.save(255 - img, new_save_path)
 
             print request.url
 
             r = make_response(
                     render_template(
                         "search.html",
-                        char_upload=request.url_root+'dynamic/{0}'.format(usr_upload_fnames[-1]),
+                        char_upload=request.url_root+'dynamic/{0}'.format(engine.user_image_path),
                         char_placeholder=char_placeholder,
                         results=[]
                     )
@@ -110,16 +110,17 @@ def index():
 
             char_placeholder = character
 
-            local_path = os.path.join('/', 'home', 'ubuntu', 'fontfinder', 's3')
+            engine.get_user_char(character)
+            y = engine.initialize()
 
-            char_dict = pickle.load( open( os.path.join(local_path, '{0}.p'.format(character)), 'rb' ) )
-
-            results = engine.evaluate(
-                character,
-                os.path.join(app.config['UPLOAD_FOLDER'], usr_upload_fnames[-1]),
-                app.config['UPLOAD_FOLDER'],
-                char_dict
-                )
+            keep_going = True
+            while(keep_going):
+                accuracy, keep_going = engine.iteration(y)
+            engine.prepare_evaluation()
+            for i in range(100):
+                print i
+                engine.evaluate_one_percent()
+            results = engine.finalize(app.config['UPLOAD_FOLDER'])
 
             i = 0
             grid_results = []
@@ -130,7 +131,7 @@ def index():
             r = make_response(
                     render_template(
                         "search.html",
-                        char_upload=request.url_root+'dynamic/{0}'.format(usr_upload_fnames[-1]),
+                        char_upload=request.url_root+'dynamic/{0}'.format(engine.user_image_path),
                         char_placeholder=char_placeholder,
                         results=grid_results
                     )

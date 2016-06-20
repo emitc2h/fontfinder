@@ -222,6 +222,11 @@ class Engine(object):
         ## Accessing character image data
         self.font_index_map = pickle.load(open(os.path.join(local_path, 's3', 'font_index_map.p'), 'rb'))
 
+        ## user image
+        self.user_image      = None
+        self.user_image_path = None
+        self.user_char       = None
+
         ## Database connection
         self.dbhost = 'fontdbinstance.c9mwqfkzqqmh.us-west-2.rds.amazonaws.com:5432'
         self.dbname = 'fontdb'
@@ -236,6 +241,12 @@ class Engine(object):
         ## Training sample parameters
         self.n_random   = 200
         self.char_array = None
+
+        ## Evaluation and results
+        self.df        = None
+        self.scores    = []
+        self.n_fonts   = 0
+        self.evaluated = 0
 
 
     ## --------------------------------------
@@ -263,16 +274,16 @@ class Engine(object):
 
 
     ## --------------------------------------
-    def load_char_array(self, char):
+    def load_char_array(self):
         """
         Loads the character array for a given character
         """
 
-        self.char_array = np.load(os.path.join(local_path, 's3', '{0}.npy'.format(char)))
+        self.char_array = np.load(os.path.join(local_path, 's3', '{0}.npy'.format(self.user_char)))
 
 
     ## ----------------------------------------
-    def generate_training_sample(self, char, img):
+    def generate_training_sample(self):
         """
         A function to generate the training samples
         """
@@ -280,11 +291,11 @@ class Engine(object):
         random.seed(42)
 
         ## normalize the image
-        norm_img = utils.normalize(img)
+        norm_img = utils.normalize(self.user_image)
     
         ## Get image dimensions
         w,h = norm_img.shape
-        assert w == h, 'Char image should be square'
+        assert w == h, 'Character image should be square'
     
         ## Obtain similar enough random fonts
         random_fonts = []
@@ -331,16 +342,35 @@ class Engine(object):
 
 
     ## --------------------------------------
-    def initialize(self, char, img):
+    def get_user_image(self, user_image_path, user_image):
+        """
+        obtain user image
+        """
+
+        self.user_image      = user_image
+        self.user_image_path = user_image_path
+
+
+    ## --------------------------------------
+    def get_user_char(self, user_char):
+        """
+        obtain user image
+        """
+
+        self.user_char = user_char
+
+
+    ## --------------------------------------
+    def initialize(self):
         """
         Initializes the neural net
         """
 
         ## Load the character array
-        self.load_char_array(char)
+        self.load_char_array()
 
         ## Generate the training sample
-        self.generate_training_sample(char, img)
+        self.generate_training_sample()
 
         ## Specify the neural network
         p1=2
@@ -375,6 +405,116 @@ class Engine(object):
             n_epochs=20,
             mini_batch_size=self.y.shape[0]//5
         )
+
+        y_one_hot, _ = self.nn.prepare_fit(self.X, self.y, verbose=True, val_X=self.X, val_y=self.y)
+
+        return y_one_hot
+
+
+    ## --------------------------------------
+    def iteration(self, y_one_hot):
+        """
+        Do one iteration
+        """
+
+        return self.nn.epoch(self.X, y_one_hot, True, self.X, y_one_hot)
+
+
+
+    ## --------------------------------------
+    def prepare_evaluation(self):
+        """
+        Prepare the evaluation of the neural net on the fonts
+        """
+
+        ## Retrieve full database
+        self.df          = pd.read_sql_query('SELECT DISTINCT name, url, licensing, aws_bucket_key FROM font_metadata;', self.connection)
+        self.df_iterator = self.df.iterrows()
+        self.scores      = []
+        self.n_fonts     = len(self.df)
+        self.evaluated   = 0
+
+
+
+    ## --------------------------------------
+    def evaluate_one_percent(self):
+        """
+        evaluate one percent of all fonts
+        """
+
+        n = math.ceil(self.n_fonts / 100.0)
+
+        i = 0
+        while(i < n):
+            try:
+                _, row = next(self.df_iterator)
+            except StopIteration:
+                return False
+
+            font = row['aws_bucket_key']
+            img  = self.char_array[self.font_index_map[font]]
+
+            norm_img      = utils.normalize(img)
+            norm_user_img = utils.normalize(self.user_image)
+
+            if abs(utils.pix_occupancy(norm_img) - utils.pix_occupancy(norm_user_img)) > 0.10 or \
+              utils.pixbypix_similarity(norm_img, norm_user_img) < 0.80:
+                score = 0
+            else:
+                norm_img.shape = (1,d*d)
+                pred = self.nn.predict_proba(norm_img)[0]
+                score = pred[0]/np.mean(pred[1:])
+
+            self.scores.append(score)
+
+        return True
+
+
+
+    ## --------------------------------------
+    def finalize(self, upload_path):
+        """
+        Rank the fonts
+        """
+
+        self.df['score'] = self.scores
+        self.df.sort_values('score', ascending=False, inplace=True)
+
+        results = []
+
+        top = self.df.head(32)
+
+        i = 0
+
+        for _, row in top.iterrows():
+
+            font = row['aws_bucket_key']
+            img  = self.char_array[self.font_index_map[font]]
+
+            random_string = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(10))
+
+            img_name ='{0}.jpg'.format(random_string)
+            img_path = os.path.join(upload_path, img_name)
+
+            try:
+                cv2.imwrite(img_path, 255 - img)
+            except KeyError:
+                cv2.imwrite(img_path, 255 - np.zeros((48,48), dtype='uint8'))
+
+            result = {
+                'name'      : row['name'],
+                'licensing' : row['licensing'],
+                'url'       : row['url'],
+                'file'      : os.path.split(font)[-1],
+                'origin'    : 'dafont.com',
+                'img_path'  : img_name
+                }
+
+            results.append(result)
+
+            i += 1
+
+        return results
 
 
 

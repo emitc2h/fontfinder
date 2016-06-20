@@ -1,8 +1,12 @@
 from flask import Flask
+from core.engine import Engine
 import os
 
 ## Create app
 app = Flask(__name__)
+
+## Create engine
+engine = Engine()
 
 ## Look up which is the current path
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
