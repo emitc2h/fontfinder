@@ -47,14 +47,14 @@ class Engine(object):
         self.y  = None
 
         ## Training sample parameters
-        self.n_random   = 200
+        self.n_random   = 300
         self.char_array = None
 
         ## Evaluation and results
         self.df          = None
         self.df_percents = []
         self.percent     = 0
-        self.scores      = []
+        self.scores      = {}
         self.n_fonts     = 0
         self.evaluated   = 0
         self.got_results = False
@@ -210,9 +210,10 @@ class Engine(object):
                 )
             ],
             learning_algorithm='Adam',
+            output_activation='softmax',
             cost_function='log-likelihood',
             learning_rate=1e-3,
-            target_accuracy=0.98,
+            target_accuracy=0.99,
             n_epochs=20,
             mini_batch_size=self.y.shape[0]//5
         )
@@ -228,7 +229,7 @@ class Engine(object):
         Do one iteration
         """
 
-        return self.nn.epoch(self.X, y_one_hot, False, self.X, y_one_hot)
+        return self.nn.epoch(self.X, y_one_hot, True, self.X, y_one_hot)
 
 
 
@@ -239,10 +240,16 @@ class Engine(object):
         """
 
         ## Retrieve full database
-        self.df          = pd.read_sql_query('SELECT DISTINCT name, url, licensing, aws_bucket_key FROM font_metadata;', self.connection)
-        self.df_percents = [df for g, df in self.df.groupby(np.arange(len(self.df)) // (len(self.df)//100))]
+        self.df          = pd.read_sql_query('SELECT DISTINCT name, url, licensing, aws_bucket_key FROM font_metadata ORDER BY aws_bucket_key;', self.connection)
+
+        a = np.repeat(range(99), len(self.df)//100)
+        b = np.repeat(99, len(self.df) - len(a))
+        c = np.append(a,b)
+
+        self.df['order_index'] = c
+        self.df_percents = [self.df[self.df['order_index'] == i] for i in range(100)]
         self.percent     = 0
-        self.scores      = []
+        self.scores      = {}
         self.n_fonts     = len(self.df)
 
 
@@ -271,9 +278,9 @@ class Engine(object):
             else:
                 norm_img.shape = (1,d*d)
                 pred = self.nn.predict_proba(norm_img)[0]
-                score = pred[0]/np.mean(pred[1:])
+                score = pred[0]/np.max(pred[1:])
 
-            self.scores.append(score)
+            self.scores[font] = score
 
         self.percent += 1
 
@@ -287,7 +294,7 @@ class Engine(object):
         Rank the fonts
         """
 
-        self.df['score'] = self.scores
+        self.df['score'] = self.df['aws_bucket_key'].map(self.scores)
         self.df.sort_values('score', ascending=False, inplace=True)
 
         results = []
