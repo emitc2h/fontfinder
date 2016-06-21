@@ -27,13 +27,13 @@
     <p class="lead" style="margin-bottom:8px;">upload an image of a single character in the font you want</p>
     <div class="row">
       <div class="col-xs-6" style="padding-top:0px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
-        <img src={{ char_upload }} class="img-thumbnail" style="float:right;">
+        <img src={{ char_upload }} class="img-thumbnail" style="float:right; padding-left:15px; padding-right:15px; padding-top:3px; padding-bottom:3px;">
       </div>
       <div class="col-xs-6" style="padding-top:0px; padding-bottom:15px; padding-left:0px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
         <p>
-          <input type=file name=file style="float:left;">
+          <input type=file name=file style="float:left; magin-top:0px;">
           <br />
-          <input type=submit value=upload class="btn btn-default btn" style="float:left; margin-top:4px; width:77px; border-radius:5px; border: 1px solid rgb(200,200,200);">
+          <input type=submit value=upload class="btn btn-default btn" style="float:left; margin-top:2px; width:77px; border-radius:5px; border: 1px solid rgb(200,200,200);">
         </p>
       </div>
     </div>
@@ -48,7 +48,7 @@
     <p class="lead" style="margin-bottom:8px;">specify which character, then launch the search</p>
     <div class="row">
       <div class="col-xs-6" style="padding-top:0px; padding-bottom:15px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
-        <input type="text" id="character" name="character" placeholder={{ char_placeholder }} style="text-align: center; width:53px; height:53px; font-size:40px; font-weight:lighter; border-radius:5px; border: 1px solid rgb(200,200,200); float:right;" maxlength="1">
+        <input type="text" id="character" name="character" placeholder={{ char_placeholder }} style="text-align: center; width:77px; height:53px; font-size:24pt; font-weight:lighter; border-radius:5px; border: 1px solid rgb(200,200,200); float:right;" maxlength="1">
       </div>
       <div class="col-xs-6" style="padding-top:0px; padding-bottom:15px; padding-left:0px; background-color:rgba(255,255,255,.0); border:1px solid rgba(255,255,255,.0);">
         <button type="submit" class="btn btn-default btn" style="font-size:16px; font-weight:bold; width:77px; height:53px; float:left;">search</button>

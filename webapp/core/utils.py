@@ -74,7 +74,7 @@ def bw_img(img):
     else:
         bwimg = img
 
-    return bwimg
+    return bwimg.astype('uint8')
 
 
 
@@ -85,7 +85,7 @@ def bilateral_filter(img):
     Applies bilateral filtering
     """
 
-    return cv2.bilateralFilter(img[:,:,0:3], 15, 41, 41)
+    return cv2.bilateralFilter(img, 15, 41, 41)
 
 
 
@@ -210,8 +210,8 @@ def preprocess(path, imgsize=100):
     """
 
     img = read_img(path)
-    img = bilateral_filter(img)
     img = bw_img(img)
+    img = bilateral_filter(img)
     img = thresholding(img)
     img = edge_and_crop(img, imgsize=imgsize)
     return img

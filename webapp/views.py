@@ -14,6 +14,68 @@ ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
 usr_upload_fnames = []
 
+
+
+## ==============================================
+class ProgressManager(object):
+    """
+    A class to manage the progress bar
+    """
+
+    ## ----------------------------------------------
+    def __init__(self):
+        """
+        Constructor
+        """
+        self.make_progress = False
+        self.y = None
+
+    ## ----------------------------------------------
+    def start(self, y):
+        """
+        Start the calculation
+        """
+        self.make_progress = True
+        self.y = y
+
+
+    ## ----------------------------------------------
+    def search(self, return_url):
+        """
+        Performs the search
+        """
+
+        progress = 0
+
+        if not self.make_progress:
+            raise StopIteration
+
+        keep_going = True
+        while(keep_going):
+            accuracy, keep_going = engine.iteration(self.y)
+            progress = int(accuracy*(20/0.98))
+            yield 'data: {{\ndata: "progress" : {0},\ndata: "message"  : "{1}",\ndata: "back"  : "{2}"\ndata: }}\n\n\n'.format(progress, 'Getting intimate with your character ...', return_url)
+
+        engine.prepare_evaluation()
+
+
+        i = 0
+        keep_going = True
+        while(keep_going):
+            progress = 20 + int(i*0.80)
+            i+=1
+            keep_going = engine.evaluate_one_percent()
+            yield 'data: {{\ndata: "progress" : {0},\ndata: "message"  : "{1}",\ndata: "back"  : "{2}"\ndata: }}\n\n\n'.format(progress, 'Searching for good matches ...', return_url)
+            
+
+        yield 'data: {{\ndata: "progress" : {0},\ndata: "message"  : "{1}",\ndata: "back"  : "{2}"\ndata: }}\n\n\n'.format(100, 'Done!', return_url)
+        self.make_progress = False
+        raise StopIteration
+
+
+
+pm = ProgressManager()
+
 ## ----------------------------------------------
 def allowed_file(filename):
     """
@@ -33,6 +95,7 @@ def add_headers(response):
     response.headers.add('Pragma', 'no-cache')
 
     return response
+
 
 @app.route('/dynamic/<filename>')
 def send_file(filename):
@@ -106,23 +169,24 @@ def index():
 
         character = request.args.get('character')
 
-        if character and len(character) == 1 and character.isalnum():
 
-            char_placeholder = character
+        ## -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+        ## Receive new character as input, launch the search
+        if character and len(character) == 1 and character.isalnum() and not engine.got_results:
 
             engine.get_user_char(character)
             y = engine.initialize()
+            pm.start(y)
+            r = make_response(
+                    render_template('progress.html')
+                )
+            return add_headers(r)
 
-            keep_going = True
-            while(keep_going):
-                accuracy, keep_going = engine.iteration(y)
-                print accuracy
 
-            engine.prepare_evaluation()
-            
-            for i in range(100):
-                print i
-                engine.evaluate_one_percent()
+        ## -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+        ## Finished result computation, return results
+        elif engine.got_results:
+
             results = engine.finalize(app.config['UPLOAD_FOLDER'])
 
             i = 0
@@ -135,14 +199,18 @@ def index():
                     render_template(
                         "search.html",
                         char_upload=request.url_root+'dynamic/{0}'.format(engine.user_image_path),
-                        char_placeholder=char_placeholder,
+                        char_placeholder=engine.user_char,
                         results=grid_results
                     )
                 )
 
             return add_headers(r)
 
+
+        ## -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+        ## nothing special, default page
         else:
+
             r = make_response(
                     render_template(
                         "search.html",
@@ -191,19 +259,10 @@ def contact():
     return render_template('contact.html')
 
 
-
-
 @app.route('/progress')
 ## ==============================================
 def progress():
-    def generate():
-        x = 0
-        while x < 100:
-            print x
-            x += 10
-            time.sleep(1)
-            yield 'data:{0}\n\n'.format(x)
-    return Response(generate(), mimetype='text/event-stream')
+    return Response(pm.search('/search'), mimetype='text/event-stream')
 
 
 
