@@ -24,7 +24,7 @@ def read_img(path):
     if ext in ['jpg', 'jpeg']:
         return np.rot90(np.asarray(Image.open(path)), -1)
     else:
-        return np.asarray(Image.open(path)).astype('uint8')
+        return np.asarray(Image.open(path)).astype('uint8')[:,:,0:3]
 
 
 
@@ -70,6 +70,22 @@ def bw_img(img):
     """
 
     if len(img.shape) > 2 and img.shape[2] > 1:
+
+        variance = 0
+        channel_with_max_variance = 0
+        for i in range(img.shape[2]):
+            current_variance = np.std(img[:,:,i])
+            if current_variance > variance:
+                variance = current_variance
+                channel_with_max_variance = i
+
+        current_variance = np.std(np.mean(img, axis=2))
+        if current_variance > variance:
+            bwing = np.mean(img, axis=2)
+        else:
+            bwimg = img[:,:,channel_with_max_variance]
+
+
         bwimg = np.mean(img, axis=2)
     else:
         bwimg = img
@@ -85,7 +101,7 @@ def bilateral_filter(img):
     Applies bilateral filtering
     """
 
-    return cv2.bilateralFilter(img, 15, 41, 41)
+    return cv2.bilateralFilter(img, 15, 31, 31)
 
 
 
@@ -110,19 +126,20 @@ def threshold(img):
     hist_values = histogram(img)
 
     ## Creates a gaussian filter to smooth the array
-    gfilter = signal.gaussian(11, std=1.5)
+    gfilter = signal.gaussian(11, std=1.7)
     smooth_values = np.convolve(hist_values, gfilter, mode='same')
 
     ## Collect maxima
-    maxima = signal.argrelextrema(smooth_values, np.greater)[0]
+    maxima        = signal.argrelextrema(smooth_values, np.greater)[0]
+    maxima_values = smooth_values[maxima]
 
-    ## Order maxima by size
-    sorted_maxima = sorted(zip(maxima, smooth_values[maxima]), key=lambda e: e[1], reverse=True)
+    if len(maxima) > 1:
+        sorted_maxima = sorted(zip(maxima, maxima_values), key=lambda e: e[1], reverse=True)
 
-    if len(sorted_maxima) > 1:
-        return np.mean([sorted_maxima[0][0], sorted_maxima[1][0]])*4
+        t = np.mean([sorted_maxima[0][0], sorted_maxima[1][0]])
+        return int(t*4)
     else:
-        return np.mean(img)
+        return int(np.mean(img))
 
 
 
@@ -134,6 +151,8 @@ def thresholding(img):
     """
 
     t = threshold(img)
+
+    print t
 
     background_tone = np.mean(
         [
