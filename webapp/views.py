@@ -54,7 +54,7 @@ class ProgressManager(object):
         while(keep_going):
             accuracy, keep_going = engine.iteration(self.y)
             progress = int(accuracy*(20/0.98))
-            yield 'data: {{\ndata: "progress" : {0},\ndata: "message"  : "{1}",\ndata: "back"  : "{2}"\ndata: }}\n\n\n'.format(progress, 'Getting intimate with your character ...', return_url)
+            yield 'data: {{\ndata: "progress" : {0},\ndata: "message"  : "{1}",\ndata: "back"  : "{2}"\ndata: }}\n\n\n'.format(progress, 'Getting to know your character ...', return_url)
 
         engine.prepare_evaluation()
 
@@ -148,8 +148,6 @@ def index():
 
             new_save_path = os.path.join(app.config['UPLOAD_FOLDER'], engine.user_image_path)
             utils.save(255 - img, new_save_path)
-
-            print request.url
 
             r = make_response(
                     render_template(

@@ -22,7 +22,7 @@ def read_img(path):
     ## Detect file extension, to orient the image
     ext = path.rsplit('.', 1)[1].lower()
     if ext in ['jpg', 'jpeg']:
-        return np.rot90(np.asarray(Image.open(path)), -1)
+        return np.rot90(np.asarray(Image.open(path)), -1).astype('uint8')[:,:,0:3]
     else:
         return np.asarray(Image.open(path)).astype('uint8')[:,:,0:3]
 
