@@ -195,7 +195,7 @@ def edge_and_crop(img, imgsize=100):
     y_values = np.nonzero(y_projection)
     y0, y1 = y_values[0][0], y_values[0][-1]
     
-    img_crop = img[max(0, x0-3):x1, max(0, y0-3):y1]
+    img_crop = img[max(0, x0-3):min(x1+1, img.shape[0]-1), max(0, y0-3):min(y1+1, img.shape[1])]
 
     scaling_factor = 0.9*imgsize/max(img_crop.shape)
     new_h = int(img_crop.shape[0]*scaling_factor)
