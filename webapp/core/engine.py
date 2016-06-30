@@ -264,25 +264,28 @@ class Engine(object):
             self.got_results = True
             return False
 
-        for _,row in self.df_percents[self.percent].iterrows():
+        norm_user_img = utils.normalize(self.user_image)
 
-            font = row['aws_bucket_key']
-            img  = self.char_array[self.font_index_map[font]]
+        fonts   = self.df_percents[self.percent]['aws_bucket_key']
+        indices = [(self.font_index_map[font]) for font in fonts]
+        imgs    = self.char_array[indices]
 
-            norm_img      = utils.normalize(img)
-            norm_user_img = utils.normalize(self.user_image)
+        norm_imgs = np.zeros(imgs.shape)
 
-            if abs(utils.pix_occupancy(norm_img) - utils.pix_occupancy(norm_user_img)) > 0.10 or \
-              utils.pixbypix_similarity(norm_img, norm_user_img) < 0.80:
-                score = 0
-            else:
-                norm_img.shape = (1,d*d)
-                pred = self.nn.predict_proba(norm_img)[0]
-                score = pred[0]/np.max(pred[1:])
+        for i in range(imgs.shape[0]):
+            norm_imgs[i] = utils.normalize(imgs[i])
 
-            self.scores[font] = score
+        norm_imgs.shape = (norm_imgs.shape[0], norm_imgs.shape[1]*norm_imgs.shape[2])
+
+        predictions = self.nn.predict_proba(norm_imgs)
+        scores      = np.divide(predictions[:,0], np.max(predictions[:,1:], axis=1))
+
+        self.scores.update(dict(zip(fonts, scores)))
 
         self.percent += 1
+
+        if self.percent % 10 == 0:
+            print '{0}% fonts evaluated'.format(self.percent)
 
         return True
 
